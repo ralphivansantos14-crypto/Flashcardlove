@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✨ Flashcard Study · Psychometrician ✨</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sky: #7dd3fc; --sky-light: #bae6fd; --sky-soft: #e0f2fe;
+      --sky-deep: #38bdf8; --sky-dark: #0284c7;
+      --accent: #f9a8d4; --text: #0c4a6e; --text-soft: #3b82a0;
+      --correct-dark: #15803d; --wrong-dark: #b91c1c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 40%, #fce7f3 100%);
+      min-height: 100vh; color: var(--text); position: relative; overflow-x: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        radial-gradient(circle at 10% 20%, rgba(125,211,252,0.25) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(249,168,212,0.2) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(196,181,253,0.15) 0%, transparent 50%);
+    }
+    .bubble {
+      position: fixed; border-radius: 50%; opacity: 0.15;
+      animation: floatBubble linear infinite; pointer-events: none; z-index: 0;
+    }
+    @keyframes floatBubble {
+      0% { transform: translateY(110vh) scale(0.8); opacity: 0; }
+      10% { opacity: 0.15; } 90% { opacity: 0.1; }
+      100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+    }
+    .app {
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; padding: 24px 16px 60px;
+    }
+    .header { text-align: center; margin-bottom: 28px; animation: fadeDown 0.8s ease both; }
+    .header .emoji-row { font-size: 2rem; letter-spacing: 6px; margin-bottom: 8px; animation: wiggle 3s ease-in-out infinite; }
+    @keyframes wiggle { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    .header h1 {
+      font-family: 'Nunito', sans-serif; font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 900;
+      background: linear-gradient(135deg, #0284c7, #7dd3fc, #f9a8d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      line-height: 1.2; margin-bottom: 6px;
+    }
+    .header p { color: var(--text-soft); font-size: 0.95rem; font-weight: 600; }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    .screen { width: 100%; max-width: 700px; animation: fadeIn 0.5s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    .section-title {
+      text-align: center; font-family: 'Nunito', sans-serif; font-size: 1.3rem; font-weight: 800;
+      color: var(--text); margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .card {
+      background: rgba(255,255,255,0.75); backdrop-filter: blur(12px);
+      border: 2px solid rgba(125,211,252,0.4); border-radius: 20px; padding: 22px 20px;
+      cursor: pointer; transition: all 0.25s cubic-bezier(.34,1.56,.64,1);
+      display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden;
+      box-shadow: 0 4px 20px rgba(125,211,252,0.12);
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(125,211,252,0.12), rgba(249,168,212,0.08));
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .card:hover { transform: translateY(-4px) scale(1.02); border-color: var(--sky-deep); box-shadow: 0 12px 36px rgba(56,189,248,0.2); }
+    .card:hover::before { opacity: 1; }
+    .card:active { transform: scale(0.98); }
+    .card-icon {
+      width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.8rem; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--sky-light), var(--sky-soft));
+      box-shadow: 0 4px 12px rgba(125,211,252,0.3);
+    }
+    .card-content { flex: 1; }
+    .card-title { font-family: 'Nunito', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+    .card-desc { font-size: 0.8rem; color: var(--text-soft); font-weight: 600; }
+    .card-arrow { font-size: 1.2rem; color: var(--sky-deep); opacity: 0; transform: translateX(-4px); transition: all 0.25s; }
+    .card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+
+    /* dark mode */
+    body.dark {
+      --sky: #38bdf8; --sky-light: #0c4a6e; --sky-soft: #082f49; --sky-deep: #7dd3fc;
+      --sky-dark: #bae6fd; --accent: #f9a8d4; --text: #e0f2fe; --text-soft: #7dd3fc;
+    }
+    body.dark { background: linear-gradient(135deg, #0a1628 0%, #0d1f35 40%, #1a0e2e 100%); }
+    body.dark .card,
+    body.dark .set-card,
+    body.dark .fc-deck-card,
+    body.dark .fc-folder-header,
+    body.dark .back-btn { background: rgba(10,22,44,0.75); border-color: rgba(56,189,248,0.25); }
+    body.dark .fc-deck-card:hover { background: rgba(10,22,44,0.9); border-color: rgba(249,168,212,0.4); }
+    body.dark .choice-letter { background: rgba(56,189,248,0.15); color: var(--sky-deep); }
+    body.dark .progress-bar-track { background: #082f49; }
+    body.dark .btn-outline { border-color: var(--sky-deep); color: var(--sky-deep); }
+    body.dark .btn-outline:hover { background: rgba(56,189,248,0.1); }
+    body.dark .missed-item { background: rgba(10,22,44,0.7); border-color: rgba(56,189,248,0.2); }
+
+    .dark-toggle {
+      position: fixed; top: 16px; right: 16px; z-index: 100;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,0.8); backdrop-filter: blur(12px);
+      border: 2px solid rgba(125,211,252,0.4); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      box-shadow: 0 4px 16px rgba(125,211,252,0.2);
+    }
+    .dark-toggle:hover { transform: scale(1.1) rotate(15deg); }
+    body.dark .dark-toggle { background: rgba(10,22,44,0.8); border-color: rgba(56,189,248,0.35); }
+
+    /* flashcards */
+    .fc-home-btn {
+      width:100%; margin-top:16px; padding:14px 20px;
+      background: linear-gradient(135deg,rgba(249,168,212,0.18),rgba(196,181,253,0.15));
+      border: 2px solid rgba(249,168,212,0.5); border-radius:20px;
+      cursor:pointer; transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+      display:flex; align-items:center; gap:16px; position:relative; overflow:hidden;
+      box-shadow:0 4px 20px rgba(249,168,212,0.12);
+    }
+    .fc-home-btn:hover { transform:translateY(-4px) scale(1.02); border-color:#f9a8d4; box-shadow:0 12px 36px rgba(249,168,212,0.25); }
+    .fc-deck-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-bottom:16px; }
+    .fc-deck-card {
+      background:rgba(255,255,255,0.78); backdrop-filter:blur(12px);
+      border:2px solid rgba(249,168,212,0.35); border-radius:20px; padding:18px 16px;
+      cursor:pointer; transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 4px 16px rgba(249,168,212,0.1); position:relative; overflow:hidden;
+    }
+    .fc-deck-card:hover { transform:translateY(-4px) scale(1.02); border-color:#f9a8d4; box-shadow:0 12px 30px rgba(249,168,212,0.2); background:rgba(255,255,255,0.9); }
+    .fc-deck-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px; }
+    .fc-deck-emoji { font-size:1.8rem; }
+    .fc-deck-actions { display:flex; gap:6px; opacity:0; transition:opacity 0.2s; }
+    .fc-deck-card:hover .fc-deck-actions { opacity:1; }
+    .fc-icon-btn {
+      width:28px; height:28px; border-radius:8px; border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; font-size:0.85rem;
+      transition:all 0.2s; background:rgba(125,211,252,0.2); color:var(--sky-dark);
+    }
+    .fc-icon-btn:hover { transform:scale(1.15); }
+    .fc-icon-btn.del { background:rgba(252,165,165,0.2); color:#b91c1c; }
+    body.dark .fc-icon-btn.del { color:#f87171; }
+    .fc-deck-name { font-family:'Nunito',sans-serif; font-weight:800; font-size:0.98rem; color:var(--text); margin-bottom:3px; }
+    .fc-deck-count { font-size:0.75rem; font-weight:600; color:var(--text-soft); }
+    .fc-add-deck-btn {
+      width:100%; padding:14px; margin-bottom:20px;
+      background:linear-gradient(135deg,#fce7f3,#f5d0fe); border:2px dashed rgba(249,168,212,0.6);
+      border-radius:20px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.95rem;
+      color:#be185d; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .fc-add-deck-btn:hover { background:linear-gradient(135deg,#fbcfe8,#ede9fe); transform:scale(1.01); }
+    body.dark .fc-add-deck-btn { background:rgba(249,168,212,0.08); border-color:rgba(249,168,212,0.3); color:#f9a8d4; }
+
+    .fc-modal-bg {
+      position:fixed; inset:0; background:rgba(0,0,0,0.35); backdrop-filter:blur(4px);
+      z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;
+      animation:fadeIn 0.2s ease;
+    }
+    .fc-modal {
+      background:white; border-radius:24px; padding:28px 24px; width:100%; max-width:440px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.2); animation:resultsPop 0.3s cubic-bezier(.34,1.56,.64,1);
+    }
+    body.dark .fc-modal { background:#0d1f35; border:1.5px solid rgba(56,189,248,0.2); }
+    .fc-modal h3 { font-family:'Nunito',sans-serif; font-weight:900; font-size:1.2rem; color:var(--text); margin-bottom:18px; text-align:center; }
+    .fc-modal label { display:block; font-size:0.82rem; font-weight:700; color:var(--text-soft); margin-bottom:5px; margin-top:14px; }
+    .fc-modal input, .fc-modal textarea, .fc-modal select {
+      width:100%; padding:10px 14px; border:2px solid rgba(125,211,252,0.4); border-radius:12px;
+      font-family:'Quicksand',sans-serif; font-size:0.92rem; font-weight:600; color:var(--text);
+      background:rgba(255,255,255,0.9); outline:none; transition:border-color 0.2s; resize:vertical;
+    }
+    body.dark .fc-modal input, body.dark .fc-modal textarea, body.dark .fc-modal select { background:rgba(10,22,44,0.8); border-color:rgba(56,189,248,0.25); color:var(--text); }
+    .fc-modal input:focus, .fc-modal textarea:focus { border-color:var(--sky-deep); }
+    .fc-modal-btns { display:flex; gap:10px; margin-top:20px; }
+    .fc-modal-cancel { flex:1; padding:11px; background:transparent; border:2px solid rgba(125,211,252,0.4); border-radius:12px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.9rem; color:var(--text-soft); cursor:pointer; }
+    .fc-modal-save { flex:2; padding:11px; background:linear-gradient(135deg,#f472b6,#c084fc); border:none; border-radius:12px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.9rem; color:white; cursor:pointer; box-shadow:0 4px 14px rgba(244,114,182,0.3); }
+
+    .fc-study-wrap { display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .fc-card-scene { width:100%; perspective:1000px; }
+    .fc-card-inner {
+      position:relative; width:100%; min-height:230px; transform-style:preserve-3d;
+      transition:transform 0.55s cubic-bezier(.34,1.1,.64,1); cursor:pointer;
+    }
+    .fc-card-inner.flipped { transform:rotateY(180deg); }
+    .fc-card-face {
+      position:absolute; inset:0; backface-visibility:hidden;
+      border-radius:24px; padding:32px 26px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      box-shadow:0 8px 32px rgba(0,0,0,0.1); min-height:230px; text-align:center;
+    }
+    .fc-card-front {
+      background:linear-gradient(135deg,rgba(255,255,255,0.92),rgba(240,249,255,0.95));
+      border:2px solid rgba(125,211,252,0.45);
+    }
+    body.dark .fc-card-front { background:linear-gradient(135deg,rgba(10,22,44,0.9),rgba(8,47,73,0.9)); }
+    .fc-card-back {
+      background:linear-gradient(135deg,rgba(252,231,243,0.95),rgba(245,208,254,0.9));
+      border:2px solid rgba(249,168,212,0.5); transform:rotateY(180deg);
+    }
+    body.dark .fc-card-back { background:linear-gradient(135deg,rgba(30,10,40,0.92),rgba(20,10,50,0.9)); }
+    .fc-card-label { font-size:0.72rem; font-weight:800; letter-spacing:1.5px; opacity:0.55; margin-bottom:12px; }
+    .fc-card-text { font-family:'Nunito',sans-serif; font-weight:800; font-size:1.12rem; color:var(--text); line-height:1.5; }
+    .fc-card-hint { font-size:0.75rem; font-weight:600; color:var(--text-soft); opacity:0.7; margin-top:16px; }
+    .fc-nav-row { display:flex; align-items:center; gap:12px; width:100%; }
+    .fc-nav-btn {
+      flex:1; padding:12px; border-radius:14px; border:2px solid rgba(125,211,252,0.4);
+      background:rgba(255,255,255,0.75); font-family:'Nunito',sans-serif; font-weight:800;
+      color:var(--sky-dark); cursor:pointer; transition:all 0.2s;
+    }
+    .fc-shuffle-btn {
+      padding:12px 18px; border-radius:14px; border:none;
+      background:linear-gradient(135deg,#f472b6,#c084fc); color:white;
+      font-family:'Nunito',sans-serif; font-weight:800;
+      cursor:pointer; box-shadow:0 4px 14px rgba(244,114,182,0.3);
+    }
+    .fc-progress-bar-wrap { width:100%; height:8px; background:var(--sky-soft); border-radius:99px; }
+    .fc-progress-bar { height:100%; background:linear-gradient(90deg,#f472b6,#c084fc); border-radius:99px; }
+    .fc-rating-row { display:flex; gap:10px; width:100%; margin-top:4px; }
+    .fc-rating-btn {
+      flex:1; padding:11px 6px; border-radius:14px; border:2px solid transparent;
+      font-family:'Nunito',sans-serif; font-weight:800; font-size:0.82rem;
+      cursor:pointer; display:flex; flex-direction:column; align-items:center;
+    }
+    .fc-rating-btn.got-it { background:rgba(74,222,128,0.15); border-color:rgba(74,222,128,0.5); color:#15803d; }
+    .fc-rating-btn.almost { background:rgba(251,191,36,0.15); border-color:rgba(251,191,36,0.5); color:#92400e; }
+    .fc-rating-btn.missed-it { background:rgba(248,113,113,0.15); border-color:rgba(248,113,113,0.5); color:#b91c1c; }
+    .fc-mastery-bar-wrap { flex:1; height:6px; background:var(--sky-soft); border-radius:99px; }
+    .fc-mastery-bar { height:100%; background:linear-gradient(90deg,#4ade80,#22d3ee); border-radius:99px; }
+    .fc-folder-header {
+      display:flex; align-items:center; gap:10px; padding:10px 14px;
+      background:rgba(255,255,255,0.6); backdrop-filter:blur(8px);
+      border:2px solid rgba(125,211,252,0.3); border-radius:14px;
+      cursor:pointer; margin-bottom:10px;
+    }
+    .fc-search-wrap { position:relative; margin-bottom:16px; }
+    .fc-search-input {
+      width:100%; padding:11px 16px 11px 40px; border-radius:16px;
+      background:rgba(255,255,255,0.82); backdrop-filter:blur(12px);
+      border:2px solid rgba(125,211,252,0.4);
+    }
+    .fc-tts-btn {
+      position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%;
+      background:rgba(255,255,255,0.7); backdrop-filter:blur(8px); border:none; cursor:pointer;
+    }
+    .back-btn {
+      display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
+      background:rgba(255,255,255,0.7); border:1.5px solid rgba(125,211,252,0.5); border-radius:20px;
+      font-family:'Nunito',sans-serif; font-weight:800; color:var(--sky-dark);
+      cursor:pointer; margin-bottom:20px;
+    }
+    .footer { text-align:center; margin-top:40px; font-size:0.78rem; color:var(--text-soft); opacity:0.7; }
+    .btn-outline {
+      flex:1; padding:13px; background:transparent; border:2px solid var(--sky-deep);
+      border-radius:14px; font-family:'Nunito',sans-serif; font-weight:800; color:var(--sky-dark); cursor:pointer;
+    }
+    .btn-primary {
+      flex:1; padding:13px; background:linear-gradient(135deg,var(--sky-deep),#0ea5e9); border:none;
+      border-radius:14px; font-family:'Nunito',sans-serif; font-weight:800; color:white; cursor:pointer;
+    }
+    /* tabs for type/write */
+    .fc-input-tabs { display:flex; gap:6px; margin-bottom:8px; margin-top:4px; }
+    .fc-tab {
+      flex:1; padding:7px 0; border-radius:10px; border:2px solid rgba(125,211,252,0.4);
+      background:transparent; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.8rem;
+      color:var(--text-soft); cursor:pointer; transition:all 0.2s;
+    }
+    .fc-tab.active { background:linear-gradient(135deg,var(--sky-deep),#0ea5e9); border-color:transparent; color:white; }
+    .fc-tab:not(.active):hover { border-color:var(--sky-deep); }
+    body.dark .fc-tab { border-color:rgba(56,189,248,0.25); }
+  </style>
+</head>
+<body>
+<button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Toggle dark mode">☀️</button>
+<div class="app" id="app">
+  <header class="header">
+    <div class="emoji-row">🃏 ✨ 📚 ✨ 🃏</div>
+    <h1>Flashcard Study</h1>
+    <p>future Psychometrician — master terms & concepts 💙</p>
+  </header>
+  <div class="screen" id="screen"></div>
+  <div class="footer">🩵 built for you · study smart</div>
+</div>
+<script>
+  (function(){
+    // ---------- DARK MODE ----------
+    window.toggleDark = function(){
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('fc_dark', isDark ? '1' : '0');
+    };
+    if(localStorage.getItem('fc_dark') === '1'){
+      document.body.classList.add('dark');
+      document.getElementById('darkToggle').textContent = '🌙';
+    }
+
+    // ---------- BUBBLES ----------
+    const colors = ['#7dd3fc','#bae6fd','#f9a8d4','#c4b5fd','#a5f3fc'];
+    for(let i=0;i<12;i++){
+      const el = document.createElement('div');
+      el.className = 'bubble';
+      const size = 20 + Math.random()*80;
+      el.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${8+Math.random()*14}s;animation-delay:${-Math.random()*14}s;`;
+      document.body.appendChild(el);
+    }
+
+    // ---------- FLASHCARD STORAGE ----------
+    const FC_STORAGE_KEY = 'psych_flashcard_decks_v1';
+    const FC_RATINGS_KEY = 'psych_flashcard_ratings_v1';
+    const FC_FOLDERS_KEY = 'psych_flashcard_folders_v1';
+
+    let fcState = {
+      decks: [],
+      ratings: {},
+      folders: [],
+      view: 'decks',
+      deckIndex: null,
+      cardIndex: 0,
+      flipped: false,
+      shuffled: [],
+      searchQuery: '',
+      openFolders: {},
+    };
+
+    const fcCanvasState = {};
+
+    function fcLoadDecks(){
+      try { return JSON.parse(localStorage.getItem(FC_STORAGE_KEY) || '[]'); } catch(e){ return []; }
+    }
+    function fcSaveDecks(){ localStorage.setItem(FC_STORAGE_KEY, JSON.stringify(fcState.decks)); }
+    function fcLoadRatings(){
+      try { return JSON.parse(localStorage.getItem(FC_RATINGS_KEY) || '{}'); } catch(e){ return {}; }
+    }
+    function fcSaveRatings(){ localStorage.setItem(FC_RATINGS_KEY, JSON.stringify(fcState.ratings)); }
+    function fcLoadFolders(){
+      try { const saved = JSON.parse(localStorage.getItem(FC_FOLDERS_KEY)||'null'); if(saved) return saved; } catch(e){}
+      return [
+        {id:'folder_abnormal', name:'🧠 Abnormal Psychology'},
+        {id:'folder_developmental', name:'🌱 Developmental Psychology'},
+        {id:'folder_assessment', name:'📋 Psychological Assessment'},
+        {id:'folder_industrial', name:'💼 Industrial Psychology'},
+        {id:'folder_other', name:'📁 Other'},
+      ];
+    }
+    function fcSaveFolders(){ localStorage.setItem(FC_FOLDERS_KEY, JSON.stringify(fcState.folders)); }
+
+    fcState.decks = fcLoadDecks();
+    fcState.ratings = fcLoadRatings();
+    fcState.folders = fcLoadFolders();
+
+    if(fcState.decks.length === 0){
+      fcState.decks = [
+        { id: Date.now()+'a', name:'Abnormal Psych Key Terms', emoji:'🧠', folder:'folder_abnormal',
+          cards:[ {front:'Comorbidity',back:'Likelihood of another disorder alongside a mental disorder'},
+                  {front:'Diathesis-Stress Model',back:'Genetic tendency + environment triggers disorder'},
+                  {front:'Delusion',back:'Persistent belief contrary to reality, resistant to correction'},
+                  {front:'Trephination',back:'Prehistoric boring hole in skull to release spirits'},
+                  {front:'Compulsion',back:'Action repeated to alleviate anxiety'} ] },
+        { id: Date.now()+'b', name:'Psych Assessment Basics', emoji:'📋', folder:'folder_assessment',
+          cards:[ {front:'Reliability',back:'Consistency of a test'},
+                  {front:'Validity',back:'Test measures what it claims to measure'},
+                  {front:'Standardization',back:'Establishing norms by administering to a representative sample'},
+                  {front:'IQ',back:'Intelligence Quotient; average is 100'} ] }
+      ];
+      fcSaveDecks();
+    }
+
+    function fcRatingKey(deckId, cardIdx){ return `${deckId}_${cardIdx}`; }
+    function fcGetMastery(deck){
+      if(!deck.cards.length) return {mastered:0,total:0,pct:0};
+      let mastered = 0;
+      deck.cards.forEach((_,i)=>{ if(fcState.ratings[fcRatingKey(deck.id,i)]==='got-it') mastered++; });
+      return {mastered, total:deck.cards.length, pct:Math.round((mastered/deck.cards.length)*100)};
+    }
+
+    // ---------- CANVAS HELPERS ----------
+    function fcInitCanvas(id){
+      const c = document.getElementById(id); if(!c) return;
+      if(c._fcInited) return; c._fcInited = true;
+      fcCanvasState[id] = {drawing:false, history:[], penColor:'#1a1a1a', penSize:3};
+      const ctx = c.getContext('2d');
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      function getPos(e){
+        const r = c.getBoundingClientRect(), scaleX = c.width/r.width, scaleY = c.height/r.height;
+        const src = e.touches ? e.touches[0] : e;
+        return {x:(src.clientX-r.left)*scaleX, y:(src.clientY-r.top)*scaleY};
+      }
+      function start(e){ e.preventDefault(); const s = fcCanvasState[id]; s.drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); s.history.push(ctx.getImageData(0,0,c.width,c.height)); }
+      function move(e){ e.preventDefault(); if(!fcCanvasState[id].drawing) return; const p = getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); }
+      function end(e){ e.preventDefault(); fcCanvasState[id].drawing = false; }
+      c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); c.addEventListener('mouseup',end); c.addEventListener('mouseleave',end);
+      c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end,{passive:false});
+    }
+    window.fcClearCanvas = function(id){
+      const c = document.getElementById(id); if(!c) return;
+      const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+      fcCanvasState[id].history = [];
+    };
+    window.fcUndoCanvas = function(id){
+      const c = document.getElementById(id); if(!c) return;
+      const s = fcCanvasState[id]; if(!s||s.history.length===0) return;
+      const ctx = c.getContext('2d'); ctx.putImageData(s.history.pop(),0,0);
+    };
+    window.fcSwitchTab = function(side, mode, deckIndex, cardIndex){
+      const typeWrap = document.getElementById(`fc-${side}-type-wrap`);
+      const drawWrap = document.getElementById(`fc-${side}-draw-wrap`);
+      const tabs = document.getElementById(`fc-${side}-tabs`);
+      if(!typeWrap||!drawWrap||!tabs) return;
+      const btns = tabs.querySelectorAll('.fc-tab');
+      if(mode==='type'){
+        typeWrap.style.display = ''; drawWrap.style.display = 'none';
+        btns[0].classList.add('active'); btns[1].classList.remove('active');
+      } else {
+        typeWrap.style.display = 'none'; drawWrap.style.display = '';
+        btns[0].classList.remove('active'); btns[1].classList.add('active');
+        setTimeout(()=>fcInitCanvas(`fc-canvas-${side}`),20);
+      }
+    };
+    function fcGetCardField(typeWrapId, canvasId){
+      const typeWrap = document.getElementById(typeWrapId);
+      if(typeWrap && typeWrap.style.display !== 'none'){
+        const ta = typeWrap.querySelector('textarea');
+        return ta ? (ta.value||'').trim() : '';
+      } else {
+        const c = document.getElementById(canvasId);
+        return c ? c.toDataURL() : '';
+      }
+    }
+
+    // ---------- FIXED TTS (VOICE) ----------
+    window.fcSpeak = function(btn){
+      const text = btn.getAttribute('data-text') || '';
+      if(!text) return;
+      if(!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.92;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    };
+    // ---------- RENDER ----------
+function render(){
+  const sc = document.getElementById('screen');
+  if(fcState.view === 'study') renderFCStudy(sc);
+  else renderDecksView(sc);
+}
+
+function renderDecksView(sc){
+  const q = fcState.searchQuery.toLowerCase().trim();
+  if(q){
+    let results = [];
+    fcState.decks.forEach((d,di)=>{
+      d.cards.forEach((c,ci)=>{
+        if(c.front.toLowerCase().includes(q) || c.back.toLowerCase().includes(q)){
+          results.push({deckIndex:di, cardIndex:ci, deckName:d.name, deckEmoji:d.emoji, front:c.front, back:c.back});
+        }
+      });
+    });
+    let h = `<div class="section-title">🃏 Flashcard Decks</div>
+      <div class="fc-search-wrap"><span class="fc-search-icon" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);">🔍</span>
+        <input class="fc-search-input" type="text" placeholder="Search all cards…" value="${q.replace(/"/g,'&quot;')}" oninput="fcSetSearch(this.value)">
+      </div><div class="fc-search-results">`;
+    if(results.length===0) h += `<div style="text-align:center;padding:20px;">No cards found for "<strong>${q}</strong>"</div>`;
+    else {
+      results.forEach(r => {
+        h += `<div class="fc-search-result-item" onclick="fcPickDeckAndCard(${r.deckIndex},${r.cardIndex})" style="background:rgba(255,255,255,0.78);border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer;">
+          <div style="font-size:1.6rem">${r.deckEmoji}</div><div style="flex:1"><div style="font-weight:800">${r.deckName}</div>
+          <div>${r.front.startsWith('data:image')?'🖼️ image':r.front}</div></div></div>`;
+      });
+    }
+    h += `</div><button class="fc-add-deck-btn" onclick="fcNewDeck()">＋ Create New Deck</button>`;
+    sc.innerHTML = h; return;
+  }
+
+  fcState.folders.forEach(f => { if(fcState.openFolders[f.id]===undefined) fcState.openFolders[f.id]=true; });
+  let h = `<div class="section-title">🃏 My Decks</div>
+    <div class="fc-search-wrap"><span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);">🔍</span>
+      <input class="fc-search-input" type="text" placeholder="Search all cards…" oninput="fcSetSearch(this.value)">
+    </div>`;
+  fcState.folders.forEach(folder => {
+    const items = fcState.decks.map((d,i)=>({deck:d, index:i})).filter(({deck})=>(deck.folder||'folder_other')===folder.id);
+    const isOpen = fcState.openFolders[folder.id];
+    h += `<div class="fc-folder-section"><div class="fc-folder-header" onclick="fcToggleFolder('${folder.id}')">
+      <span style="transition:transform 0.2s;${isOpen?'transform:rotate(90deg)':''}">▶</span>
+      <span style="flex:1;font-weight:800;">${folder.name}</span><span>${items.length} deck${items.length!==1?'s':''}</span>
+      <button class="fc-icon-btn" onclick="event.stopPropagation();fcEditFolder('${folder.id}')">✏️</button>
+    </div>`;
+    if(isOpen){
+      h += `<div class="fc-deck-grid">`;
+      items.forEach(({deck:d, index:i})=>{
+        const m = fcGetMastery(d);
+        h += `<div class="fc-deck-card" onclick="fcPickDeck(${i})"><div class="fc-deck-top">
+          <div class="fc-deck-emoji">${d.emoji}</div><div class="fc-deck-actions" onclick="event.stopPropagation()">
+            <button class="fc-icon-btn" onclick="fcShowBulkImport(${i})">📥</button>
+            <button class="fc-icon-btn" onclick="fcEditDeck(${i})">✏️</button>
+            <button class="fc-icon-btn del" onclick="fcDeleteDeck(${i})">🗑️</button>
+          </div></div><div class="fc-deck-name">${d.name}</div>
+          <div class="fc-deck-count">${d.cards.length} card${d.cards.length!==1?'s':''}</div>`;
+        if(d.cards.length) h += `<div class="fc-deck-mastery"><div class="fc-mastery-bar-wrap"><div class="fc-mastery-bar" style="width:${m.pct}%"></div></div><span>${m.mastered}/${m.total} ✓</span></div>`;
+        h += `</div>`;
+      });
+      if(items.length===0) h += `<div style="grid-column:1/-1;text-align:center;padding:18px;opacity:0.7">No decks yet</div>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  });
+  h += `<div style="display:flex;gap:12px;"><button class="fc-add-deck-btn" onclick="fcNewDeck()">＋ New Deck</button>
+    <button class="fc-add-deck-btn" style="background:rgba(125,211,252,0.2)" onclick="fcNewFolder()">📁 New Folder</button></div>`;
+  sc.innerHTML = h;
+}
+
+function renderFCStudy(sc){
+  const deck = fcState.decks[fcState.deckIndex];
+  if(!deck) { fcGoDecks(); return; }
+  if(deck.cards.length === 0){
+    sc.innerHTML = `<button class="back-btn" onclick="fcGoDecks()">← Back</button><div class="section-title">${deck.emoji} ${deck.name}</div>
+      <div style="text-align:center;padding:40px;">✨ No cards yet.<br><button class="fc-add-deck-btn" style="margin-top:20px" onclick="fcAddCard(${fcState.deckIndex})">＋ Add Card</button></div>`;
+    return;
+  }
+  const realIdx = fcState.shuffled[fcState.cardIndex];
+  const card = deck.cards[realIdx];
+  const pct = Math.round(((fcState.cardIndex+1)/deck.cards.length)*100);
+  const rating = fcState.ratings[fcRatingKey(deck.id,realIdx)] || '';
+  
+  // Prepare text for TTS (strip HTML if image)
+  const frontText = card.front.startsWith('data:image') ? '' : card.front.replace(/<[^>]*>/g, '');
+  const backText = card.back.startsWith('data:image') ? '' : card.back.replace(/<[^>]*>/g, '');
+  
+  sc.innerHTML = `<button class="back-btn" onclick="fcGoDecks()">← Back to Decks</button>
+    <div class="section-title">${deck.emoji} ${deck.name}</div>
+    <div class="fc-study-wrap">
+      <div style="width:100%"><div style="display:flex;justify-content:space-between;"><span>Card ${fcState.cardIndex+1}/${deck.cards.length}</span><span>${pct}%</span></div>
+        <div class="fc-progress-bar-wrap"><div class="fc-progress-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="fc-card-scene" onclick="fcFlip()">
+        <div class="fc-card-inner${fcState.flipped?' flipped':''}" id="fc-card-inner">
+          <div class="fc-card-face fc-card-front" style="position:relative">
+            <button class="fc-tts-btn" data-text="${frontText.replace(/"/g,'&quot;')}" onclick="fcSpeak(this)">🔊</button>
+            <div class="fc-card-label">TERM / QUESTION</div>
+            <div class="fc-card-text">${card.front.startsWith('data:image')?`<img src="${card.front}" style="max-width:100%;max-height:110px;">`:card.front}</div>
+            <div class="fc-card-hint">👆 tap to reveal</div>
+          </div>
+          <div class="fc-card-face fc-card-back" style="position:relative">
+            <button class="fc-tts-btn" data-text="${backText.replace(/"/g,'&quot;')}" onclick="fcSpeak(this)">🔊</button>
+            <div class="fc-card-label">DEFINITION / ANSWER</div>
+            <div class="fc-card-text">${card.back.startsWith('data:image')?`<img src="${card.back}" style="max-width:100%;max-height:110px;">`:card.back}</div>
+          </div>
+        </div>
+      </div>
+      <div id="fc-rating-row" class="fc-rating-row" style="display:${fcState.flipped?'flex':'none'}">
+        <button class="fc-rating-btn got-it" data-rating="got-it" onclick="fcRate('got-it')" style="opacity:${rating&&rating!=='got-it'?0.45:1}">✅ Got it!</button>
+        <button class="fc-rating-btn almost" data-rating="almost" onclick="fcRate('almost')" style="opacity:${rating&&rating!=='almost'?0.45:1}">🤔 Almost</button>
+        <button class="fc-rating-btn missed-it" data-rating="missed-it" onclick="fcRate('missed-it')" style="opacity:${rating&&rating!=='missed-it'?0.45:1}">❌ Missed</button>
+      </div>
+      <div class="fc-nav-row">
+        <button class="fc-nav-btn" onclick="fcPrev()" ${fcState.cardIndex===0?'disabled':''}>← Prev</button>
+        <button class="fc-shuffle-btn" onclick="fcShuffle()">🔀</button>
+        <button class="fc-nav-btn" onclick="fcNext()" ${fcState.cardIndex===deck.cards.length-1?'disabled':''}>Next →</button>
+      </div>
+      <div style="display:flex;gap:10px;width:100%">
+        <button class="btn-outline" onclick="fcEditCard(${fcState.deckIndex},${realIdx})">✏️ Edit</button>
+        <button class="btn-outline" style="border-color:#f9a8d4;color:#be185d" onclick="fcDeleteCard(${fcState.deckIndex},${realIdx})">🗑️ Delete</button>
+        <button class="btn-primary" onclick="fcAddCard(${fcState.deckIndex})">＋ Add</button>
+      </div>
+    </div>`;
+}
+    // ---------- ACTIONS ----------
+    window.fcGoDecks = function(){ fcState.view='decks'; fcState.deckIndex=null; fcState.searchQuery=''; render(); };
+    window.fcPickDeck = function(i){ fcState.deckIndex=i; fcState.cardIndex=0; fcState.flipped=false; fcState.shuffled=[...Array(fcState.decks[i].cards.length).keys()]; fcState.view='study'; render(); };
+    window.fcPickDeckAndCard = function(di, ci){ fcState.deckIndex=di; fcState.shuffled=[...Array(fcState.decks[di].cards.length).keys()]; fcState.cardIndex=fcState.shuffled.indexOf(ci); if(fcState.cardIndex<0) fcState.cardIndex=0; fcState.flipped=false; fcState.view='study'; fcState.searchQuery=''; render(); };
+    window.fcFlip = function(){ fcState.flipped=!fcState.flipped; const inner=document.getElementById('fc-card-inner'); if(inner) inner.classList.toggle('flipped',fcState.flipped); const row=document.getElementById('fc-rating-row'); if(row) row.style.display=fcState.flipped?'flex':'none'; };
+    window.fcRate = function(r){ const d=fcState.decks[fcState.deckIndex]; if(!d) return; const real=fcState.shuffled[fcState.cardIndex]; fcState.ratings[fcRatingKey(d.id,real)]=r; fcSaveRatings(); document.querySelectorAll('.fc-rating-btn').forEach(b=>{ b.style.opacity = b.dataset.rating===r?'1':'0.4'; }); setTimeout(()=>{ if(fcState.cardIndex < fcState.shuffled.length-1){ fcNext(); } else { render(); } },600); };
+    window.fcNext = function(){ if(fcState.cardIndex < fcState.shuffled.length-1){ fcState.cardIndex++; fcState.flipped=false; render(); } };
+    window.fcPrev = function(){ if(fcState.cardIndex > 0){ fcState.cardIndex--; fcState.flipped=false; render(); } };
+    window.fcShuffle = function(){ const arr=fcState.shuffled; for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} fcState.cardIndex=0; fcState.flipped=false; render(); };
+    window.fcSetSearch = function(v){ fcState.searchQuery=v; render(); };
+    window.fcToggleFolder = function(id){ fcState.openFolders[id]=!fcState.openFolders[id]; render(); };
+
+    window.fcShowModal = function(html){ const bg=document.createElement('div'); bg.className='fc-modal-bg'; bg.id='fc-modal-bg'; bg.innerHTML=`<div class="fc-modal">${html}</div>`; bg.addEventListener('click',e=>{ if(e.target===bg) fcCloseModal(); }); document.body.appendChild(bg); };
+    window.fcCloseModal = function(){ const m=document.getElementById('fc-modal-bg'); if(m) m.remove(); };
+    window.fcNewDeck = function(){
+      const opts = fcState.folders.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+      fcShowModal(`<h3>✨ New Deck</h3><label>Name</label><input id="fc-deck-name" placeholder="e.g. Theories"><label>Emoji</label><input id="fc-deck-emoji" value="🌸"><label>Folder</label><select id="fc-deck-folder">${opts}</select><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" onclick="fcSaveDeck()">Create</button></div>`);
+      setTimeout(()=>document.getElementById('fc-deck-name')?.focus(),50);
+    };
+    window.fcSaveDeck = function(){
+      const name = document.getElementById('fc-deck-name')?.value.trim();
+      const emoji = document.getElementById('fc-deck-emoji')?.value.trim() || '🌸';
+      const folder = document.getElementById('fc-deck-folder')?.value || 'folder_other';
+      if(!name) return;
+      fcState.decks.push({id:Date.now()+'', name, emoji, folder, cards:[]});
+      fcSaveDecks(); fcCloseModal(); render();
+    };
+    window.fcEditDeck = function(i){
+      const d=fcState.decks[i]; const opts=fcState.folders.map(f=>`<option value="${f.id}" ${(d.folder||'folder_other')===f.id?'selected':''}>${f.name}</option>`).join('');
+      fcShowModal(`<h3>✏️ Edit Deck</h3><label>Name</label><input id="fc-deck-name" value="${d.name.replace(/"/g,'&quot;')}"><label>Emoji</label><input id="fc-deck-emoji" value="${d.emoji}"><label>Folder</label><select id="fc-deck-folder">${opts}</select><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" onclick="fcUpdateDeck(${i})">Save</button></div>`);
+    };
+    window.fcUpdateDeck = function(i){ const name=document.getElementById('fc-deck-name')?.value.trim(); if(name) fcState.decks[i].name=name; fcState.decks[i].emoji=document.getElementById('fc-deck-emoji')?.value.trim()||'🌸'; fcState.decks[i].folder=document.getElementById('fc-deck-folder')?.value||'folder_other'; fcSaveDecks(); fcCloseModal(); render(); };
+    window.fcDeleteDeck = function(i){ fcShowModal(`<h3>Delete deck?</h3><p>${fcState.decks[i].name}</p><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" style="background:#f87171" onclick="fcConfirmDeleteDeck(${i})">Delete</button></div>`); };
+    window.fcConfirmDeleteDeck = function(i){ fcState.decks.splice(i,1); fcSaveDecks(); fcCloseModal(); fcGoDecks(); };
+    window.fcNewFolder = function(){ fcShowModal(`<h3>📁 New Folder</h3><input id="fc-folder-name" placeholder="Folder name"><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" onclick="fcSaveFolder()">Create</button></div>`); };
+    window.fcSaveFolder = function(){ const n=document.getElementById('fc-folder-name')?.value.trim(); if(n){ fcState.folders.push({id:'folder_'+Date.now(), name:n}); fcSaveFolders(); } fcCloseModal(); render(); };
+    window.fcEditFolder = function(id){ const f=fcState.folders.find(x=>x.id===id); if(!f) return; fcShowModal(`<h3>Rename</h3><input id="fc-folder-name" value="${f.name.replace(/"/g,'&quot;')}"><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" onclick="fcUpdateFolder('${id}')">Save</button></div>`); };
+    window.fcUpdateFolder = function(id){ const n=document.getElementById('fc-folder-name')?.value.trim(); const f=fcState.folders.find(x=>x.id===id); if(f && n) f.name=n; fcSaveFolders(); fcCloseModal(); render(); };
+
+    // ---------- CARD MANAGEMENT (with type/write tabs) ----------
+    window.fcAddCard = function(di){
+      fcShowModal(`
+        <h3>➕ Add Flashcard</h3>
+        <label>Front (Term / Question)</label>
+        <div class="fc-input-tabs" id="fc-front-tabs">
+          <button class="fc-tab active" onclick="fcSwitchTab('front','type',${di})">⌨️ Type</button>
+          <button class="fc-tab" onclick="fcSwitchTab('front','draw',${di})">✏️ Write</button>
+        </div>
+        <div id="fc-front-type-wrap"><textarea id="fc-card-front" placeholder="e.g. Reliability"></textarea></div>
+        <div id="fc-front-draw-wrap" style="display:none">
+          <canvas id="fc-canvas-front" width="380" height="110" style="border:2px solid rgba(125,211,252,0.4);border-radius:12px;background:#fff;touch-action:none;width:100%;cursor:crosshair"></canvas>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcClearCanvas('fc-canvas-front')">🗑️ Clear</button>
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcUndoCanvas('fc-canvas-front')">↩️ Undo</button>
+          </div>
+        </div>
+        <label style="margin-top:14px">Back (Definition / Answer)</label>
+        <div class="fc-input-tabs" id="fc-back-tabs">
+          <button class="fc-tab active" onclick="fcSwitchTab('back','type',${di})">⌨️ Type</button>
+          <button class="fc-tab" onclick="fcSwitchTab('back','draw',${di})">✏️ Write</button>
+        </div>
+        <div id="fc-back-type-wrap"><textarea id="fc-card-back" placeholder="e.g. Consistency of a test"></textarea></div>
+        <div id="fc-back-draw-wrap" style="display:none">
+          <canvas id="fc-canvas-back" width="380" height="110" style="border:2px solid rgba(125,211,252,0.4);border-radius:12px;background:#fff;touch-action:none;width:100%;cursor:crosshair"></canvas>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcClearCanvas('fc-canvas-back')">🗑️ Clear</button>
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcUndoCanvas('fc-canvas-back')">↩️ Undo</button>
+          </div>
+        </div>
+        <div class="fc-modal-btns">
+          <button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button>
+          <button class="fc-modal-save" onclick="fcSaveCard(${di})">Add Card 🌸</button>
+        </div>`);
+      setTimeout(()=>{ document.getElementById('fc-card-front')?.focus(); fcInitCanvas('fc-canvas-front'); fcInitCanvas('fc-canvas-back'); },50);
+    };
+
+    window.fcSaveCard = function(di){
+      const front = fcGetCardField('fc-front-type-wrap','fc-canvas-front');
+      const back = fcGetCardField('fc-back-type-wrap','fc-canvas-back');
+      if(!front||!back) return;
+      fcState.decks[di].cards.push({front,back});
+      fcSaveDecks(); fcCloseModal();
+      if(fcState.view==='study' && fcState.deckIndex===di){
+        fcState.shuffled = [...Array(fcState.decks[di].cards.length).keys()];
+        render();
+      } else render();
+    };
+
+    window.fcEditCard = function(di,ci){
+      const card = fcState.decks[di].cards[ci];
+      const isImgFront = card.front.startsWith('data:image');
+      const isImgBack  = card.back.startsWith('data:image');
+      fcShowModal(`
+        <h3>✏️ Edit Card</h3>
+        <label>Front (Term / Question)</label>
+        <div class="fc-input-tabs" id="fc-front-tabs">
+          <button class="fc-tab${isImgFront?'':' active'}" onclick="fcSwitchTab('front','type',${di},${ci})">⌨️ Type</button>
+          <button class="fc-tab${isImgFront?' active':''}" onclick="fcSwitchTab('front','draw',${di},${ci})">✏️ Write</button>
+        </div>
+        <div id="fc-front-type-wrap"${isImgFront?' style="display:none"':''}><textarea id="fc-card-front">${isImgFront?'':card.front.replace(/</g,'&lt;')}</textarea></div>
+        <div id="fc-front-draw-wrap"${isImgFront?'':' style="display:none"'}>
+          <canvas id="fc-canvas-front" width="380" height="110" style="border:2px solid rgba(125,211,252,0.4);border-radius:12px;background:#fff;touch-action:none;width:100%;cursor:crosshair"></canvas>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcClearCanvas('fc-canvas-front')">🗑️ Clear</button>
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcUndoCanvas('fc-canvas-front')">↩️ Undo</button>
+          </div>
+        </div>
+        <label style="margin-top:14px">Back (Definition / Answer)</label>
+        <div class="fc-input-tabs" id="fc-back-tabs">
+          <button class="fc-tab${isImgBack?'':' active'}" onclick="fcSwitchTab('back','type',${di},${ci})">⌨️ Type</button>
+          <button class="fc-tab${isImgBack?' active':''}" onclick="fcSwitchTab('back','draw',${di},${ci})">✏️ Write</button>
+        </div>
+        <div id="fc-back-type-wrap"${isImgBack?' style="display:none"':''}><textarea id="fc-card-back">${isImgBack?'':card.back.replace(/</g,'&lt;')}</textarea></div>
+        <div id="fc-back-draw-wrap"${isImgBack?'':' style="display:none"'}>
+          <canvas id="fc-canvas-back" width="380" height="110" style="border:2px solid rgba(125,211,252,0.4);border-radius:12px;background:#fff;touch-action:none;width:100%;cursor:crosshair"></canvas>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcClearCanvas('fc-canvas-back')">🗑️ Clear</button>
+            <button class="fc-modal-cancel" style="flex:1;padding:7px;font-size:0.8rem" onclick="fcUndoCanvas('fc-canvas-back')">↩️ Undo</button>
+          </div>
+        </div>
+        <div class="fc-modal-btns">
+          <button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button>
+          <button class="fc-modal-save" onclick="fcUpdateCard(${di},${ci})">Save ✨</button>
+        </div>`);
+      setTimeout(()=>{
+        fcInitCanvas('fc-canvas-front'); fcInitCanvas('fc-canvas-back');
+        if(isImgFront){ const c=document.getElementById('fc-canvas-front'); if(c){ const img=new Image(); img.onload=()=>{ const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,c.width,c.height); }; img.src=card.front; } }
+        if(isImgBack){  const c=document.getElementById('fc-canvas-back');  if(c){ const img=new Image(); img.onload=()=>{ const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,c.width,c.height); }; img.src=card.back;  } }
+        else document.getElementById('fc-card-front')?.focus();
+      },50);
+    };
+
+    window.fcUpdateCard = function(di,ci){
+      const front = fcGetCardField('fc-front-type-wrap','fc-canvas-front');
+      const back = fcGetCardField('fc-back-type-wrap','fc-canvas-back');
+      if(!front||!back) return;
+      fcState.decks[di].cards[ci] = {front,back};
+      fcSaveDecks(); fcCloseModal(); render();
+    };
+
+    window.fcDeleteCard = function(di,ci){
+      fcShowModal(`<h3>🗑️ Delete Flashcard?</h3><p>This cannot be undone.</p><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" style="background:#f87171" onclick="fcConfirmDeleteCard(${di},${ci})">Delete 🗑️</button></div>`);
+    };
+    window.fcConfirmDeleteCard = function(di,ci){
+      fcState.decks[di].cards.splice(ci,1); fcSaveDecks(); fcCloseModal();
+      if(fcState.view==='study'){
+        fcState.shuffled = [...Array(fcState.decks[di].cards.length).keys()];
+        if(fcState.cardIndex >= fcState.shuffled.length) fcState.cardIndex = Math.max(0, fcState.shuffled.length-1);
+        render();
+      } else render();
+    };
+
+    window.fcShowBulkImport = function(di){
+      fcCloseModal();
+      fcShowModal(`<h3>📥 Bulk Import Cards</h3><p style="font-size:0.8rem">One per line: Front | Back</p><textarea id="fc-bulk" rows="6" placeholder="Reliability | consistency&#10;Validity | measures what it claims"></textarea><div class="fc-modal-btns"><button class="fc-modal-cancel" onclick="fcCloseModal()">Cancel</button><button class="fc-modal-save" onclick="fcImportCards(${di})">Import</button></div>`);
+    };
+    window.fcImportCards = function(di){
+      const raw = document.getElementById('fc-bulk')?.value || '';
+      const lines = raw.split('\n').filter(l=>l.trim());
+      const cards = lines.map(l=>{ const sep = l.includes('|') ? '|' : '\t'; const [f,...r] = l.split(sep); return {front:(f||'').trim(), back:r.join(sep).trim()}; }).filter(p=>p.front&&p.back);
+      if(cards.length){ fcState.decks[di].cards.push(...cards); fcSaveDecks(); }
+      fcCloseModal(); render();
+    };
+
+    render();
+  })();
+</script>
+</body>
+</html>
